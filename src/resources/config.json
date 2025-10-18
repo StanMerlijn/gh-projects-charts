@@ -1,0 +1,9 @@
+{
+    "user_name": "",
+    "project_number": 0,
+    "max_items": 100,
+    "calculators": ["assigned", "closed"],
+    "sprint": 0,
+    "start_date": "06-10-2025",
+    "end_date": "17-10-2025"
+}

@@ -1,0 +1,43 @@
+query ($login: String!, $number: Int!, $max_items: Int!, $cursor: String) {
+  user(login: $login) {
+    projectV2(number: $number) {
+      title
+      id
+      items(first: $max_items, after: $cursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          id
+          fieldValueByName(name: "Status") {
+            ... on ProjectV2ItemFieldSingleSelectValue {
+              name
+            }
+          }
+          content {
+            ... on Issue {
+              title
+              assignees(first: 10) {
+                nodes {
+                  login
+                }
+              }
+            #   timelineItems(first: 20, itemTypes: [ASSIGNED_EVENT]) {
+            #     nodes {
+            #       __typename
+            #       ... on AssignedEvent {
+            #         createdAt
+            #       }
+            #     }
+            #   }
+
+              createdAt
+              closedAt
+            }
+          }
+        }
+      }
+    }
+  }
+}
