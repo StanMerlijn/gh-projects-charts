@@ -7,7 +7,7 @@ series, and render a burndown chart using Matplotlib.
 
 from util import utc_to_date
 from datetime import datetime, timedelta
-from api_wrapper import Api_wrapper
+from api_wrapper import ApiWrapper
 from pathlib import Path
 from pprint import pprint
 import json
@@ -45,7 +45,7 @@ class Chart_generator:
         self.config = self.get_config()
         self.dates = self.__create_dates()
         self.date_keys = ["closedAt", "createdAt"]
-        self.api_wrapper = Api_wrapper(self.config, RESOURCES_PATH)
+        self.api_wrapper = ApiWrapper(self.config, RESOURCES_PATH)
 
         self.start_date: datetime = datetime.strptime(
             self.config["start_date"], "%d-%m-%Y"
