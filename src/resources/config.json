@@ -3,7 +3,12 @@
     "project_number": 0,
     "max_items": 100,
     "calculators": ["assigned", "closed"],
-    "sprint": 0,
-    "start_date": "06-10-2025",
-    "end_date": "17-10-2025"
+    "sprint_data": 
+    {
+        "sprint": 0,
+        "start_date": "dd-mm-jjjj",
+        "end_date": "dd-mm-jjjj"
+    },
+    "wants_to_display": true,
+    "wants_to_save": true
 }
