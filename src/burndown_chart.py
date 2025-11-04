@@ -34,6 +34,7 @@ class Burndown_data:
 
 class BurndownChart:
     """Class to plot and or save the project data into a burndown chart"""
+    
     def __init__(
         self, config: dict, dates: list[str], start_date: datetime, end_date: datetime
     ):

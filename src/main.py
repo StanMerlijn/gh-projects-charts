@@ -6,6 +6,7 @@
 @author gh-projects-charts maintainers
 @date 2025-11-05
 """
+
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -40,6 +41,40 @@ class dataGenerator:
         self.burndown_chart = BurndownChart(
             self.config, self.sprint_dates, self.start_date, self.end_date
         )
+
+    def __check_and_get_cache(
+        self, ttl_seconds: int = 3600, force_refresh: bool = False
+    ) -> Optional[dict]:
+        """Return cached API response from data.json when fresh; otherwise None.
+
+        Args:
+            ttl_seconds: Consider cache valid if modified within this many seconds.
+                         Set to 0 or a negative value to always use cache when present.
+            force_refresh: If True, bypass cache and return None.
+
+        Returns:
+            Parsed JSON dict if valid cache is found; otherwise None.
+        """
+        if force_refresh:
+            return None
+
+        cache_path = RESOURCES_PATH / "data.json"
+        if not cache_path.exists():
+            return None
+
+        try:
+            if ttl_seconds > 0:
+                mtime = cache_path.stat().st_mtime
+                age_seconds = max(0, int(datetime.now().timestamp() - mtime))
+                if age_seconds > ttl_seconds:
+                    return None
+
+            print("Getting cache")
+            with cache_path.open("r", encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, json.JSONDecodeError):
+            # Corrupt or unreadable cache; ignore it
+            return None
 
     def get_config(self) -> dict:
         """Load configuration from resources/config.json.
@@ -134,44 +169,10 @@ class dataGenerator:
 
         return days
 
-    def check_and_get_cache(
-        self, ttl_seconds: int = 3600, force_refresh: bool = False
-    ) -> Optional[dict]:
-        """Return cached API response from data.json when fresh; otherwise None.
-
-        Args:
-            ttl_seconds: Consider cache valid if modified within this many seconds.
-                         Set to 0 or a negative value to always use cache when present.
-            force_refresh: If True, bypass cache and return None.
-
-        Returns:
-            Parsed JSON dict if valid cache is found; otherwise None.
-        """
-        if force_refresh:
-            return None
-
-        cache_path = RESOURCES_PATH / "data.json"
-        if not cache_path.exists():
-            return None
-
-        try:
-            if ttl_seconds > 0:
-                mtime = cache_path.stat().st_mtime
-                age_seconds = max(0, int(datetime.now().timestamp() - mtime))
-                if age_seconds > ttl_seconds:
-                    return None
-
-            print("Getting cache")
-            with cache_path.open("r", encoding="utf-8") as f:
-                return json.load(f)
-        except (OSError, json.JSONDecodeError):
-            # Corrupt or unreadable cache; ignore it
-            return None
-
     def fetch_and_plot_burndown_chart(self):
         """Fetch, cache, transform, and plot the sprint burndown chart."""
         # Try cache first (1 hour TTL). Set ttl_seconds=0 to always use when present
-        data = self.check_and_get_cache(ttl_seconds=3600)
+        data = self.__check_and_get_cache(ttl_seconds=3600)
         if data is None:
             print("Requesting data from github API")
             data = self.api_wrapper.get_request()
