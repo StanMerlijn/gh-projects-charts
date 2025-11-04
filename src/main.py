@@ -1,58 +1,45 @@
-"""Generate charts from GitHub Projects data.
-
-This module contains the high-level orchestration to fetch project items via
-the GitHub GraphQL API, cache the response, preprocess the data into a time
-series, and render a burndown chart using Matplotlib.
 """
-
-from util import utc_to_date
+@file main.py
+@brief Orchestrate fetching GitHub Projects data and plotting charts.
+@details Loads config, fetches/caches GraphQL data, filters issues, and delegates plotting to `BurndownChart`.
+@dependencies requests, python-dotenv, matplotlib
+@author gh-projects-charts maintainers
+@date 2025-11-05
+"""
+import json
 from datetime import datetime, timedelta
-from api_wrapper import ApiWrapper
 from pathlib import Path
 from pprint import pprint
-import json
 from typing import Optional
-from dataclasses import dataclass
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
+
+from api_wrapper import ApiWrapper
+from burndown_chart import BurndownChart
+from util import utc_to_date
 
 FILE_PATH = Path(__file__).parent.resolve()
 RESOURCES_PATH = FILE_PATH / "resources"
 
 
-@dataclass
-class Burndown_data:
-    """Container for all inputs to the burndown plotting routine.
-
-    Attributes:
-        total_issues: Total number of issues considered in the sprint window.
-        dates: List of day strings ("DD-MM-YYYY") composing the x-axis.
-        open_issues: Count of open issues for each date.
-        unassigned_open_issues: Optional series for unassigned open issues.
-    """
-
-    total_issues: int  # Changed from str to int
-    dates: list[str]  # X dataset
-    open_issues: list[int]  # Y datasets (renamed from closed)
-    unassigned_open_issues: list[int]
-
-
-class Chart_generator:
+class dataGenerator:
     """Drive data collection, transformation, and chart rendering."""
 
     def __init__(self) -> None:
         """Load configuration, compute date range, and initialize API client."""
         self.config = self.get_config()
-        self.dates = self.__create_dates()
+        self.sprint_dates = self.__create_dates()
         self.date_keys = ["closedAt", "createdAt"]
         self.api_wrapper = ApiWrapper(self.config, RESOURCES_PATH)
 
         self.start_date: datetime = datetime.strptime(
-            self.config["start_date"], "%d-%m-%Y"
+            self.config["sprint_data"]["start_date"], "%d-%m-%Y"
         ).date()
         self.end_date: datetime = datetime.strptime(
-            self.config["end_date"], "%d-%m-%Y"
+            self.config["sprint_data"]["end_date"], "%d-%m-%Y"
         ).date()
+
+        self.burndown_chart = BurndownChart(
+            self.config, self.sprint_dates, self.start_date, self.end_date
+        )
 
     def get_config(self) -> dict:
         """Load configuration from resources/config.json.
@@ -131,8 +118,12 @@ class Chart_generator:
     def __create_dates(self) -> list[str]:
         """Build an inclusive list of day strings for the configured sprint."""
         # Parse into date objects (DD-MM-YYYY format)
-        start_date = datetime.strptime(self.config["start_date"], "%d-%m-%Y").date()
-        end_date = datetime.strptime(self.config["end_date"], "%d-%m-%Y").date()
+        start_date = datetime.strptime(
+            self.config["sprint_data"]["start_date"], "%d-%m-%Y"
+        ).date()
+        end_date = datetime.strptime(
+            self.config["sprint_data"]["end_date"], "%d-%m-%Y"
+        ).date()
 
         # Generate all days between start and end (inclusive)
         days = []
@@ -142,45 +133,6 @@ class Chart_generator:
             current += timedelta(days=1)
 
         return days
-
-    def prep_data_for_burndown_chart(self, issues: list[dict]) -> Burndown_data:
-        """Prepare burndown inputs by counting open issues per day.
-
-        Args:
-            issues: Filtered list of issues within/overlapping the sprint.
-
-        Returns:
-            A `Burndown_data` instance consumable by the plotting function.
-        """
-        # Get the num open issues per day
-        open_issues = []
-
-        for date in self.dates:
-            current_date = datetime.strptime(date, "%d-%m-%Y").date()
-            num_issues_open = 0
-
-            for issue in issues:
-                content = issue.get("content") or {}
-                date_value = content.get("closedAt")
-
-                if date_value is None:
-                    num_issues_open += 1
-                    continue
-
-                # if is open
-                if current_date <= datetime.strptime(date_value, "%d-%m-%Y").date():
-                    num_issues_open += 1
-
-            open_issues.append(num_issues_open)
-
-        print(open_issues)
-
-        return Burndown_data(
-            total_issues=len(issues),
-            dates=self.dates,
-            open_issues=open_issues,
-            unassigned_open_issues=None,
-        )
 
     def check_and_get_cache(
         self, ttl_seconds: int = 3600, force_refresh: bool = False
@@ -216,74 +168,7 @@ class Chart_generator:
             # Corrupt or unreadable cache; ignore it
             return None
 
-    def plot_burndown_chart(self, burndown_data: Burndown_data):
-        """Plot the burndown chart showing open issues over time.
-
-        Args:
-            burndown_data: Prepared series containing dates and open issue counts.
-        """
-        # Convert date strings to datetime objects for better plotting
-        dates = [datetime.strptime(date, "%d-%m-%Y") for date in burndown_data.dates]
-
-        fig, ax = plt.subplots(figsize=(12, 6))
-        ax.plot(
-            dates,
-            burndown_data.open_issues,
-            label="Tasks open",
-            linewidth=2,
-            markersize=4,
-        )
-
-        # Overlay: Unassigned open issues
-        if burndown_data.unassigned_open_issues:
-            ax.plot(
-                dates,
-                burndown_data.unassigned_open_issues,
-                linestyle=":",
-                color="orange",
-                linewidth=2,
-                label="Unassigned open",
-            )
-
-        # No extra space before first/last label
-        ax.margins(x=0, y=0)
-        ax.set_xlim(dates[0], dates[-1])
-
-        # Formatting
-        sprint_label = (
-            self.config.get("sprint")
-            or f"{self.start_date.strftime('%d-%m')}–{self.end_date.strftime('%d-%m')}"
-        )
-        ax.set_title(
-            f"Sprint {sprint_label} Burndown Chart", fontsize=16, fontweight="bold"
-        )
-        ax.set_xlabel("Date", fontsize=12)
-        ax.set_ylabel("Open Issues", fontsize=12)
-        ax.grid(True, alpha=0.3)
-
-        # Format x-axis dates
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%d-%m-%Y"))
-        ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
-        plt.setp(ax.get_xticklabels(), rotation=45)
-
-        # Ideal burndown
-        total_issues = burndown_data.total_issues
-        if len(dates) > 1:
-            ideal_line = [
-                total_issues - (i * total_issues / (len(dates) - 1))
-                for i in range(len(dates))
-            ]
-        else:
-            ideal_line = [total_issues]
-        ax.plot(
-            dates, ideal_line, "--", alpha=0.7, color="grey", label="Ideal Burndown"
-        )
-
-        ax.legend()
-        fig.tight_layout()
-        plt.show()
-
-    def generate_charts(self):
+    def fetch_and_plot_burndown_chart(self):
         """Fetch, cache, transform, and plot the sprint burndown chart."""
         # Try cache first (1 hour TTL). Set ttl_seconds=0 to always use when present
         data = self.check_and_get_cache(ttl_seconds=3600)
@@ -311,15 +196,13 @@ class Chart_generator:
         data = self.__filter_on_task(data)
         data = self.__filter_on_sprint(data)
 
-        data_burndown_chart = self.prep_data_for_burndown_chart(data)
+        # Plot the issues
+        self.burndown_chart.plot_burndown_chart(data)
         # pprint(data)
-        print(self.dates)
-
-        # Plot the burndown chart
-        self.plot_burndown_chart(data_burndown_chart)
+        print(self.sprint_dates)
 
 
 if __name__ == "__main__":
     """Entry point to render the burndown chart when run as a script."""
-    chart_generator = Chart_generator()
-    chart_generator.generate_charts()
+    chart_generator = dataGenerator()
+    chart_generator.fetch_and_plot_burndown_chart()

@@ -1,8 +1,9 @@
-"""Utility helpers for file I/O and date conversion.
-
-This module contains small helpers used throughout the project, such as
-reading files from disk and converting GitHub ISO8601 timestamps to the
-project's preferred date string format.
+"""
+@file util.py
+@brief Utility helpers for file I/O and date conversion.
+@details Provides `load_file` and ISO8601 UTC -> DD-MM-YYYY conversion used across the project.
+@author gh-projects-charts maintainers
+@date 2025-11-05
 """
 from datetime import datetime
 from pathlib import Path
@@ -19,7 +20,7 @@ def load_file(filename: Path) -> str:
     """
     with open(filename, "r") as file:
         file_content = file.read()
-        
+
     return file_content
 
 
@@ -40,5 +41,3 @@ def utc_to_date(ts: str) -> str:
     dt_utc = datetime.fromisoformat(ts.replace("Z", "+00:00"))
     # Return the date in DD-MM-YYYY format
     return dt_utc.strftime("%d-%m-%Y")
-       
-    

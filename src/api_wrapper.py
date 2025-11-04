@@ -1,12 +1,16 @@
-"""Lightweight GitHub GraphQL API wrapper.
-
-This module encapsulates loading a GraphQL query from disk and executing it
+"""
+@file api_wrapper.py
+@brief Lightweight GitHub GraphQL API wrapper.
+@details This module encapsulates loading a GraphQL query from disk and executing it
 against the GitHub GraphQL endpoint using a personal access token provided via
-environment (dotenv)."""
-
-from dotenv import dotenv_values
-from util import load_file
+environment (dotenv).
+@author gh-projects-charts maintainers
+@date 2025-11-05
+"""
 import requests
+from dotenv import dotenv_values
+
+from util import load_file
 
 env = dotenv_values()
 API_URL = "https://api.github.com/graphql"
