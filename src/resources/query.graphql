@@ -23,6 +23,11 @@ query ($login: String!, $number: Int!, $max_items: Int!, $cursor: String) {
                   login
                 }
               }
+              labels(first: 50) {
+                nodes {
+                  name
+                }
+              }
             #   timelineItems(first: 20, itemTypes: [ASSIGNED_EVENT]) {
             #     nodes {
             #       __typename
