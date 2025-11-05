@@ -145,7 +145,17 @@ class dataGenerator:
             overlaps = created <= self.end_date and (
                 closed is None or closed >= self.start_date
             )
-            if overlaps:
+            
+            # Get the current sprint from field 'sprint'
+            is_correct_sprint = False
+            sprint = issue.get("sprint")
+            
+            if sprint is not None:
+                sprint_num = int(sprint.get("number"))
+                if sprint_num == self.config.get("sprint_data").get("sprint"):
+                    is_correct_sprint = True
+                                
+            if overlaps and (sprint is None or is_correct_sprint is True):
                 included.append(issue)
 
         return included
@@ -172,7 +182,8 @@ class dataGenerator:
     def fetch_and_plot_burndown_chart(self):
         """Fetch, cache, transform, and plot the sprint burndown chart."""
         # Try cache first (1 hour TTL). Set ttl_seconds=0 to always use when present
-        data = self.__check_and_get_cache(ttl_seconds=3600)
+        # data = self.__check_and_get_cache(ttl_seconds=3600)
+        data = None
         if data is None:
             print("Requesting data from github API")
             data = self.api_wrapper.get_request()
@@ -180,7 +191,7 @@ class dataGenerator:
             # Persist fresh response to cache
             with open(RESOURCES_PATH / "data.json", "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=2)
-
+            
         nodes = (
             data.get("data", {})
             .get("user", {})
@@ -192,7 +203,6 @@ class dataGenerator:
             pprint(data)
             return
         data = nodes
-
         data = self.__format_times(data)
         data = self.__filter_on_task(data)
         data = self.__filter_on_sprint(data)

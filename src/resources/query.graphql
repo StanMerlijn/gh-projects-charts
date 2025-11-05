@@ -15,6 +15,7 @@ query ($login: String!, $number: Int!, $max_items: Int!, $cursor: String) {
               name
             }
           }
+          
           content {
             ... on Issue {
               title
@@ -28,17 +29,22 @@ query ($login: String!, $number: Int!, $max_items: Int!, $cursor: String) {
                   name
                 }
               }
-            #   timelineItems(first: 20, itemTypes: [ASSIGNED_EVENT]) {
-            #     nodes {
-            #       __typename
-            #       ... on AssignedEvent {
-            #         createdAt
-            #       }
-            #     }
-            #   }
+              #   timelineItems(first: 20, itemTypes: [ASSIGNED_EVENT]) {
+              #     nodes {
+              #       __typename
+              #       ... on AssignedEvent {
+              #         createdAt
+              #       }
+              #     }
+              #   }
 
               createdAt
               closedAt
+            }
+          }
+          sprint: fieldValueByName(name: "Sprint") {
+            ... on ProjectV2ItemFieldNumberValue {
+              number
             }
           }
         }
