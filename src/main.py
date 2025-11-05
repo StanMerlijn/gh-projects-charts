@@ -211,6 +211,26 @@ class dataGenerator:
         self.burndown_chart.plot_burndown_chart(data)
         # pprint(data)
         print(self.sprint_dates)
+        
+        print()
+        print(f"Issues for sprint {self.config.get("sprint_data").get("sprint")}")
+        print("--"*100)
+        
+        num_issues_closed = 0
+        for issue in data:
+            content = issue.get("content")
+            title = content.get("title")
+            createdAt = content.get("createdAt")
+            closedAt = content.get("closedAt")
+            if closedAt is None:
+                closedAt = "Not closed"
+            else:
+                num_issues_closed += 1
+            print(f"| {title:<150} | {createdAt:10} | {closedAt:10} |")
+
+        print("--"*100)
+        print(f"Closed {num_issues_closed} issues out of the {len(data)}\nThere are {len(data) - num_issues_closed} tasks open")
+        
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ from pathlib import Path
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 FILE_PATH = Path(__file__).parent.resolve()
 
@@ -68,7 +69,7 @@ class BurndownChart:
                     continue
 
                 # if is open
-                if current_date <= datetime.strptime(date_value, "%d-%m-%Y").date():
+                if current_date < datetime.strptime(date_value, "%d-%m-%Y").date():
                     num_issues_open += 1
 
             open_issues.append(num_issues_open)
@@ -155,6 +156,9 @@ class BurndownChart:
         # No extra space before first/last label
         ax.margins(x=0, y=0)
         ax.set_xlim(sprint_dates[0], sprint_dates[-1])
+
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_ylim(bottom=0) 
 
         # Formatting
         ax.set_title(
