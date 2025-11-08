@@ -182,8 +182,8 @@ class dataGenerator:
     def fetch_and_plot_burndown_chart(self):
         """Fetch, cache, transform, and plot the sprint burndown chart."""
         # Try cache first (1 hour TTL). Set ttl_seconds=0 to always use when present
-        # data = self.__check_and_get_cache(ttl_seconds=3600)
-        data = None
+        data = self.__check_and_get_cache(ttl_seconds=3600)
+        # data = None
         if data is None:
             print("Requesting data from github API")
             data = self.api_wrapper.get_request()
@@ -217,17 +217,24 @@ class dataGenerator:
         print("--"*100)
         
         num_issues_closed = 0
+        num_issues_with_estimate = 0
         for issue in data:
             content = issue.get("content")
+            
             title = content.get("title")
             createdAt = content.get("createdAt")
             closedAt = content.get("closedAt")
+            
+            estimate = issue.get("estimate").get("number") if issue.get("estimate") else 0
+            if estimate > 0:
+                num_issues_with_estimate += 1
+                
             if closedAt is None:
                 closedAt = "Not closed"
             else:
                 num_issues_closed += 1
-            print(f"| {title:<150} | {createdAt:10} | {closedAt:10} |")
-
+            print(f"| {title:<150} | {createdAt:10} | {closedAt:10} | {estimate:10} |")
+        
         print("--"*100)
         print(f"Closed {num_issues_closed} issues out of the {len(data)}\nThere are {len(data) - num_issues_closed} tasks open")
         

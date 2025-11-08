@@ -47,6 +47,11 @@ query ($login: String!, $number: Int!, $max_items: Int!, $cursor: String) {
               number
             }
           }
+          estimate: fieldValueByName(name: "Estimate") {
+            ... on ProjectV2ItemFieldNumberValue {
+              number
+            }
+          }
         }
       }
     }

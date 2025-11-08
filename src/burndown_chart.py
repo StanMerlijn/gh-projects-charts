@@ -5,6 +5,7 @@
 @author gh-projects-charts maintainers
 @date 2025-11-05
 """
+
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -30,12 +31,12 @@ class Burndown_data:
     total_issues: int  # Changed from str to int
     dates: list[str]  # X dataset
     open_issues: list[int]  # Y datasets (renamed from closed)
-    unassigned_open_issues: list[int]
+    total_effort_per_day: list[int]
 
 
 class BurndownChart:
     """Class to plot and or save the project data into a burndown chart"""
-    
+
     def __init__(
         self, config: dict, dates: list[str], start_date: datetime, end_date: datetime
     ):
@@ -55,32 +56,38 @@ class BurndownChart:
         """
         # Get the num open issues per day
         open_issues = []
+        total_effort_per_day = []
 
         for date in self.sprint_dates:
             current_date = datetime.strptime(date, "%d-%m-%Y").date()
             num_issues_open = 0
+            daily_effort = 0
 
             for issue in issues:
                 content = issue.get("content") or {}
                 date_value = content.get("closedAt")
-
-                if date_value is None:
+                estimate = issue.get("estimate")
+                
+                if date_value is None or estimate is None:
                     num_issues_open += 1
                     continue
-
+                
                 # if is open
                 if current_date < datetime.strptime(date_value, "%d-%m-%Y").date():
                     num_issues_open += 1
+                    daily_effort += estimate.get("number")                
 
             open_issues.append(num_issues_open)
-
+            total_effort_per_day.append(daily_effort)
+            
         print(open_issues)
+        print(total_effort_per_day)
 
         return Burndown_data(
             total_issues=len(issues),
             dates=self.sprint_dates,
             open_issues=open_issues,
-            unassigned_open_issues=None,
+            total_effort_per_day=total_effort_per_day,
         )
 
     def __display_and_save_plot(self, plt: plt) -> None:
@@ -126,6 +133,7 @@ class BurndownChart:
                 - Displays a Matplotlib window (behavior may vary by backend).
 
         """
+        calculators = self.config.get("calculators")
         burndown_data = self.__prepare_burndown_data(issues)
 
         # Convert date strings to datetime objects for better plotting
@@ -134,23 +142,23 @@ class BurndownChart:
         ]
 
         fig, ax = plt.subplots(figsize=(12, 6))
-        ax.plot(
-            sprint_dates,
-            burndown_data.open_issues,
-            label="Tasks open",
-            linewidth=2,
-            markersize=4,
-        )
-
-        # Overlay: Unassigned open issues
-        if burndown_data.unassigned_open_issues:
+        
+        if "closed" in calculators:
             ax.plot(
                 sprint_dates,
-                burndown_data.unassigned_open_issues,
-                linestyle=":",
-                color="orange",
+                burndown_data.open_issues,
+                label="Tasks open",
                 linewidth=2,
-                label="Unassigned open",
+                markersize=4,
+            )
+        
+        if "estimate" in calculators:
+            ax.plot(
+                sprint_dates,
+                burndown_data.total_effort_per_day,
+                label="Estimate effort",
+                linewidth=2,
+                markersize=4,
             )
 
         # No extra space before first/last label
@@ -158,7 +166,7 @@ class BurndownChart:
         ax.set_xlim(sprint_dates[0], sprint_dates[-1])
 
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.set_ylim(bottom=0) 
+        ax.set_ylim(bottom=0)
 
         # Formatting
         ax.set_title(
