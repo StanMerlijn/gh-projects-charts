@@ -42,6 +42,46 @@ class dataGenerator:
             self.config, self.sprint_dates, self.start_date, self.end_date
         )
 
+    def __print_nodes(self, nodes: list[dict]) -> None:
+        """Print the nodes into a table with useful information
+        
+        Args:
+            nodes: A list of the nodes 
+        """
+        print()
+        print(f"Issues for sprint {self.config.get('sprint_data').get('sprint')}")
+        print("|" + "--" * 100 + "|")
+        print(
+            f"| {'title':<150} | {'createdA':10} | {'closedAt':10} | {'estimate':10} |"
+        )
+        print("|" + "--" * 100 + "|")
+
+        num_issues_closed = 0
+        num_issues_with_estimate = 0
+        for issue in nodes:
+            content = issue.get("content")
+
+            title = content.get("title")
+            createdAt = content.get("createdAt")
+            closedAt = content.get("closedAt")
+
+            estimate = (
+                issue.get("estimate").get("number") if issue.get("estimate") else 0
+            )
+            if estimate > 0:
+                num_issues_with_estimate += 1
+
+            if closedAt is None:
+                closedAt = "Not closed"
+            else:
+                num_issues_closed += 1
+            print(f"| {title:<150} | {createdAt:10} | {closedAt:10} | {estimate:10} |")
+
+        print("|" + "--" * 100 + "|")
+        print(
+            f"Closed {num_issues_closed} issues out of the {len(nodes)}\nThere are {len(nodes) - num_issues_closed} tasks open"
+        )
+    
     def __check_and_get_cache(
         self, ttl_seconds: int = 3600, force_refresh: bool = False
     ) -> Optional[dict]:
@@ -145,16 +185,16 @@ class dataGenerator:
             overlaps = created <= self.end_date and (
                 closed is None or closed >= self.start_date
             )
-            
+
             # Get the current sprint from field 'sprint'
             is_correct_sprint = False
             sprint = issue.get("sprint")
-            
+
             if sprint is not None:
                 sprint_num = int(sprint.get("number"))
                 if sprint_num == self.config.get("sprint_data").get("sprint"):
                     is_correct_sprint = True
-                                
+
             if overlaps and (sprint is None or is_correct_sprint is True):
                 included.append(issue)
 
@@ -191,7 +231,8 @@ class dataGenerator:
             # Persist fresh response to cache
             with open(RESOURCES_PATH / "data.json", "w", encoding="utf-8") as file:
                 json.dump(nodes, file, ensure_ascii=False, indent=2)
-            
+
+        # Get the nodes from the response
         nodes = (
             nodes.get("data", {})
             .get("user", {})
@@ -202,40 +243,16 @@ class dataGenerator:
         if not isinstance(nodes, list):
             pprint(nodes)
             return
+        
         nodes = self.__format_times(nodes)
         nodes = self.__filter_on_task(nodes)
         nodes = self.__filter_on_sprint(nodes)
 
         # Plot the issues
         self.burndown_chart.plot_burndown_chart(nodes)
-        # pprint(data)
-        print(self.sprint_dates)
-        
-        print()
-        print(f"Issues for sprint {self.config.get("sprint_data").get("sprint")}")
-        print("--"*100)
-        
-        num_issues_closed = 0
-        num_issues_with_estimate = 0
-        for issue in nodes:
-            content = issue.get("content")
-            
-            title = content.get("title")
-            createdAt = content.get("createdAt")
-            closedAt = content.get("closedAt")
-            
-            estimate = issue.get("estimate").get("number") if issue.get("estimate") else 0
-            if estimate > 0:
-                num_issues_with_estimate += 1
-                
-            if closedAt is None:
-                closedAt = "Not closed"
-            else:
-                num_issues_closed += 1
-            print(f"| {title:<150} | {createdAt:10} | {closedAt:10} | {estimate:10} |")
-        
-        print("--"*100)
-        print(f"Closed {num_issues_closed} issues out of the {len(nodes)}\nThere are {len(nodes) - num_issues_closed} tasks open")
+
+        self.__print_nodes(nodes)
+
         
 
 
