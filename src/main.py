@@ -182,33 +182,32 @@ class dataGenerator:
     def fetch_and_plot_burndown_chart(self):
         """Fetch, cache, transform, and plot the sprint burndown chart."""
         # Try cache first (1 hour TTL). Set ttl_seconds=0 to always use when present
-        data = self.__check_and_get_cache(ttl_seconds=3600)
+        nodes = self.__check_and_get_cache(ttl_seconds=3600)
         # data = None
-        if data is None:
+        if nodes is None:
             print("Requesting data from github API")
-            data = self.api_wrapper.get_request()
+            nodes = self.api_wrapper.get_request()
 
             # Persist fresh response to cache
             with open(RESOURCES_PATH / "data.json", "w", encoding="utf-8") as file:
-                json.dump(data, file, ensure_ascii=False, indent=2)
+                json.dump(nodes, file, ensure_ascii=False, indent=2)
             
         nodes = (
-            data.get("data", {})
+            nodes.get("data", {})
             .get("user", {})
             .get("projectV2", {})
             .get("items", {})
             .get("nodes")
         )
         if not isinstance(nodes, list):
-            pprint(data)
+            pprint(nodes)
             return
-        data = nodes
-        data = self.__format_times(data)
-        data = self.__filter_on_task(data)
-        data = self.__filter_on_sprint(data)
+        nodes = self.__format_times(nodes)
+        nodes = self.__filter_on_task(nodes)
+        nodes = self.__filter_on_sprint(nodes)
 
         # Plot the issues
-        self.burndown_chart.plot_burndown_chart(data)
+        self.burndown_chart.plot_burndown_chart(nodes)
         # pprint(data)
         print(self.sprint_dates)
         
@@ -218,7 +217,7 @@ class dataGenerator:
         
         num_issues_closed = 0
         num_issues_with_estimate = 0
-        for issue in data:
+        for issue in nodes:
             content = issue.get("content")
             
             title = content.get("title")
@@ -236,7 +235,7 @@ class dataGenerator:
             print(f"| {title:<150} | {createdAt:10} | {closedAt:10} | {estimate:10} |")
         
         print("--"*100)
-        print(f"Closed {num_issues_closed} issues out of the {len(data)}\nThere are {len(data) - num_issues_closed} tasks open")
+        print(f"Closed {num_issues_closed} issues out of the {len(nodes)}\nThere are {len(nodes) - num_issues_closed} tasks open")
         
 
 
