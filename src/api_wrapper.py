@@ -7,6 +7,7 @@ environment (dotenv).
 @author gh-projects-charts maintainers
 @date 2025-11-05
 """
+
 import requests
 from dotenv import dotenv_values
 
@@ -46,16 +47,45 @@ class ApiWrapper:
         Returns:
             The parsed JSON response as a dictionary.
         """
-        variables = {
-            "login": self.config["user_name"],
-            "number": self.config["project_number"],
-            "max_items": self.config["max_items"],
-        }
-        resp = requests.post(
-            API_URL,
-            json={"query": self.query, "variables": variables},
-            headers=self.headers,
-        )
-        data = resp.json()
 
-        return data
+        cursor = None
+        all_data = None
+        while True:
+            variables = {
+                "login": self.config["user_name"],
+                "number": self.config["project_number"],
+                "max_items": self.config["max_items"],
+                "cursor": cursor,
+            }
+            resp = requests.post(
+                API_URL,
+                json={"query": self.query, "variables": variables},
+                headers=self.headers,
+            )
+            data = resp.json()
+
+            items = data["data"]["user"]["projectV2"]["items"]
+
+            if all_data is None:
+                all_data = data
+            else:
+                all_data["data"]["user"]["projectV2"]["items"]["nodes"].extend(
+                    items["nodes"]
+                )
+
+            page_info = items["pageInfo"]
+            next_cursor = page_info["endCursor"]
+
+            
+            if not page_info["hasNextPage"]:
+                break
+
+            if next_cursor is None or next_cursor == cursor:
+                # safety break to avoid infinite loops
+                break
+            
+            cursor = next_cursor
+            
+            
+        print(len(all_data["data"]["user"]["projectV2"]["items"]["nodes"]))
+        return all_data
