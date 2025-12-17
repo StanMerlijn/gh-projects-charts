@@ -2,7 +2,7 @@
     "user_name": "",
     "project_number": 0,
     "max_items": 100,
-    "calculators": ["assigned", "closed"],
+    "calculators": ["estimate", "closed"],
     "sprint_data": 
     {
         "sprint": 0,
