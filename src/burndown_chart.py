@@ -154,8 +154,8 @@ class BurndownChart:
             )
 
         # No extra space before first/last label
-        ax.margins(x=0, y=0)
-        ax.set_xlim(sprint_dates[0], sprint_dates[-1])
+        ax.margins(x=0.02, y=0.1)
+        # ax.set_xlim(sprint_dates[0], sprint_dates[-1])
 
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
         ax.set_ylim(bottom=0) 
