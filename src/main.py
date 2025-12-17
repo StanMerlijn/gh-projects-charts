@@ -154,6 +154,8 @@ class dataGenerator:
                 sprint_num = int(sprint.get("number"))
                 if sprint_num == self.config.get("sprint_data").get("sprint"):
                     is_correct_sprint = True
+            else:
+                print(f"Issue {content.get("number", "no number found")}: {content.get("title", f"No title found for issues {issue}")} does not have Sprint field")
                                 
             if overlaps and (sprint is None or is_correct_sprint is True):
                 included.append(issue)
@@ -191,7 +193,7 @@ class dataGenerator:
             # Persist fresh response to cache
             with open(RESOURCES_PATH / "data.json", "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=2)
-            
+        
         nodes = (
             data.get("data", {})
             .get("user", {})
@@ -202,6 +204,7 @@ class dataGenerator:
         if not isinstance(nodes, list):
             pprint(data)
             return
+    
         data = nodes
         data = self.__format_times(data)
         data = self.__filter_on_task(data)

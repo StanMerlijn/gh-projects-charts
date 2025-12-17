@@ -18,6 +18,7 @@ query ($login: String!, $number: Int!, $max_items: Int!, $cursor: String) {
           
           content {
             ... on Issue {
+              number
               title
               assignees(first: 10) {
                 nodes {
