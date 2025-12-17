@@ -64,6 +64,7 @@ class ApiWrapper:
             )
             data = resp.json()
 
+            # Get the issues
             items = data["data"]["user"]["projectV2"]["items"]
 
             if all_data is None:
@@ -73,10 +74,11 @@ class ApiWrapper:
                     items["nodes"]
                 )
 
+            # Get the page info
             page_info = items["pageInfo"]
             next_cursor = page_info["endCursor"]
-
             
+            # Break if there is not next page
             if not page_info["hasNextPage"]:
                 break
 
