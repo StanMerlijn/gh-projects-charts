@@ -67,24 +67,21 @@ class BurndownChart:
                 content = issue.get("content") or {}
                 closed_date = content.get("closedAt")
                 estimate = issue.get("estimate")
-                
+
                 if closed_date is None:
                     num_issues_open += 1
                     continue
-                
+
                 # if is open
                 if current_date <= datetime.strptime(closed_date, "%d-%m-%Y").date():
                     num_issues_open += 1
                     if estimate is None:
                         daily_effort += 0
-                    else:    
-                        daily_effort += estimate.get("number", 0)                
+                    else:
+                        daily_effort += estimate.get("number", 0)
 
             open_issues.append(num_issues_open)
             total_effort_per_day.append(daily_effort)
-            
-        print(open_issues)
-        print(total_effort_per_day)
 
         return Burndown_data(
             total_issues=len(issues),
@@ -110,6 +107,7 @@ class BurndownChart:
                 / f"Burndown_chart_sprint_{self.config['sprint_data']['sprint']}"
             )
             plt.savefig(charts_dir, dpi=400)
+            print(f"Saved the plot to {charts_dir}")
 
         if self.config["wants_to_display"]:
             plt.show()
@@ -145,7 +143,7 @@ class BurndownChart:
         ]
 
         fig, ax = plt.subplots(figsize=(12, 6))
-        
+
         if "closed" in calculators:
             ax.plot(
                 sprint_dates,
@@ -154,7 +152,7 @@ class BurndownChart:
                 linewidth=2,
                 markersize=4,
             )
-        
+
         if "estimate" in calculators:
             ax.plot(
                 sprint_dates,

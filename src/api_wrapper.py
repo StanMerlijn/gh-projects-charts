@@ -12,6 +12,7 @@ import requests
 from dotenv import dotenv_values
 
 from util import load_file
+from pprint import pprint
 
 env = dotenv_values()
 API_URL = "https://api.github.com/graphql"
@@ -62,9 +63,17 @@ class ApiWrapper:
                 json={"query": self.query, "variables": variables},
                 headers=self.headers,
             )
+
+            # Check the response
+            if resp.status_code != 200:
+                print("bad response, error:")
+                pprint(resp.json())
+                return {}
+
             data = resp.json()
 
             # Get the issues
+            # IDK, this some ugly shi!
             items = data["data"]["user"]["projectV2"]["items"]
 
             if all_data is None:
@@ -77,7 +86,7 @@ class ApiWrapper:
             # Get the page info
             page_info = items["pageInfo"]
             next_cursor = page_info["endCursor"]
-            
+
             # Break if there is not next page
             if not page_info["hasNextPage"]:
                 break
@@ -85,9 +94,7 @@ class ApiWrapper:
             if next_cursor is None or next_cursor == cursor:
                 # safety break to avoid infinite loops
                 break
-            
+
             cursor = next_cursor
-            
-            
-        print(len(all_data["data"]["user"]["projectV2"]["items"]["nodes"]))
+
         return all_data

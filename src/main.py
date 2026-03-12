@@ -44,15 +44,15 @@ class dataGenerator:
 
     def __print_nodes(self, nodes: list[dict]) -> None:
         """Print the nodes into a table with useful information
-        
+
         Args:
-            nodes: A list of the nodes 
+            nodes: A list of the nodes
         """
         print()
         print(f"Issues for sprint {self.config.get('sprint_data').get('sprint')}")
         print("|" + "--" * 100 + "|")
         print(
-            f"| {'title':<150} | {'createdA':10} | {'closedAt':10} | {'estimate':10} |"
+            f"| {'title':<150} | {'createdAt':10} | {'closedAt':10} | {'estimate':10} |"
         )
         print("|" + "--" * 100 + "|")
 
@@ -81,7 +81,7 @@ class dataGenerator:
         print(
             f"Closed {num_issues_closed} issues out of the {len(nodes)}\nThere are {len(nodes) - num_issues_closed} tasks open"
         )
-    
+
     def __check_and_get_cache(
         self, ttl_seconds: int = 3600, force_refresh: bool = False
     ) -> Optional[dict]:
@@ -149,8 +149,14 @@ class dataGenerator:
         """Filter issues to those labeled as tasks."""
         tasks = []
         for issue in issues:
-            labels = issue["content"]["labels"]["nodes"]
-            if len(labels) > 0 and "task" in labels[0].values():
+            content = issue.get("content")
+            if not content:
+                continue
+            labels = content.get("labels") or {}
+            nodes = labels.get("nodes") or []
+            if nodes and any(
+                isinstance(v, str) and v.lower() == "task" for v in nodes[0].values()
+            ):
                 tasks.append(issue)
 
         return tasks
@@ -187,17 +193,21 @@ class dataGenerator:
             )
 
             # Get the current sprint from field 'sprint'
-            is_correct_sprint = False
+            # NOTE: `is_correct_sprint` will be True even if there is no Sprint field in the given issue.
+            # This ensures that without the Sprint field the issue will be added if it aligns within the sprint date.
+            is_correct_sprint = True
             sprint = issue.get("sprint")
 
             if sprint is not None:
                 sprint_num = int(sprint.get("number"))
-                if sprint_num == self.config.get("sprint_data").get("sprint"):
-                    is_correct_sprint = True
+                if sprint_num != self.config.get("sprint_data").get("sprint"):
+                    is_correct_sprint = False
             else:
-                print(f"Issue {content.get("number", "no number found")}: {content.get("title", f"No title found for issues {issue}")} does not have Sprint field")
-                                
-            if overlaps and (sprint is None or is_correct_sprint is True):
+                print(
+                    f"Issue {content.get('number', 'no number found')}: {content.get('title', f'No title found for issues {issue}')} does not have Sprint field"
+                )
+
+            if overlaps and (sprint is None or is_correct_sprint is not False):
                 included.append(issue)
 
         return included
@@ -224,11 +234,13 @@ class dataGenerator:
     def fetch_and_plot_burndown_chart(self):
         """Fetch, cache, transform, and plot the sprint burndown chart."""
         # Try cache first (1 hour TTL). Set ttl_seconds=0 to always use when present
-        nodes = self.__check_and_get_cache(ttl_seconds=3600)
-        # data = None
+        # nodes = self.__check_and_get_cache(ttl_seconds=3600)
+        nodes = None
         if nodes is None:
             print("Requesting data from github API")
             nodes = self.api_wrapper.get_request()
+            if nodes == {}:
+                return
 
             # Persist fresh response to cache
             with open(RESOURCES_PATH / "data.json", "w", encoding="utf-8") as file:
@@ -245,7 +257,7 @@ class dataGenerator:
         if not isinstance(nodes, list):
             pprint(nodes)
             return
-        
+
         nodes = self.__format_times(nodes)
         nodes = self.__filter_on_task(nodes)
         nodes = self.__filter_on_sprint(nodes)
@@ -254,8 +266,6 @@ class dataGenerator:
         self.burndown_chart.plot_burndown_chart(nodes)
 
         self.__print_nodes(nodes)
-
-        
 
 
 if __name__ == "__main__":
