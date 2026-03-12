@@ -65,17 +65,20 @@ class BurndownChart:
 
             for issue in issues:
                 content = issue.get("content") or {}
-                date_value = content.get("closedAt")
+                closed_date = content.get("closedAt")
                 estimate = issue.get("estimate")
                 
-                if date_value is None or estimate is None:
+                if closed_date is None:
                     num_issues_open += 1
                     continue
                 
                 # if is open
-                if current_date < datetime.strptime(date_value, "%d-%m-%Y").date():
+                if current_date <= datetime.strptime(closed_date, "%d-%m-%Y").date():
                     num_issues_open += 1
-                    daily_effort += estimate.get("number")                
+                    if estimate is None:
+                        daily_effort += 0
+                    else:    
+                        daily_effort += estimate.get("number", 0)                
 
             open_issues.append(num_issues_open)
             total_effort_per_day.append(daily_effort)
